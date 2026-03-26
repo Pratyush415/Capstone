@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML Algorithm Comparison — Boston Housing Dataset</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1e2330;
+    --lr: #00e5ff;
+    --svr: #ff6b6b;
+    --knn: #69ff8a;
+    --lr-dim: rgba(0,229,255,0.12);
+    --svr-dim: rgba(255,107,107,0.12);
+    --knn-dim: rgba(105,255,138,0.12);
+    --text: #e8ecf4;
+    --muted: #6b7589;
+    --accent: #f0b429;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 28px 80px; }
+
+  /* HEADER */
+  header {
+    padding: 60px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 56px;
+    animation: fadeDown 0.7s ease both;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 4px 10px;
+    border-radius: 2px;
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 14px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    max-width: 560px;
+  }
+
+  /* ALGORITHM BADGES */
+  .algo-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 52px;
+    flex-wrap: wrap;
+    animation: fadeUp 0.7s 0.15s ease both;
+  }
+
+  .algo-badge {
+    flex: 1;
+    min-width: 200px;
+    padding: 24px 22px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+
+  .algo-badge:hover { transform: translateY(-3px); }
+
+  .algo-badge::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .algo-badge.lr { background: var(--lr-dim); }
+  .algo-badge.lr::before { background: var(--lr); }
+  .algo-badge.svr { background: var(--svr-dim); }
+  .algo-badge.svr::before { background: var(--svr); }
+  .algo-badge.knn { background: var(--knn-dim); }
+  .algo-badge.knn::before { background: var(--knn); }
+
+  .algo-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .lr .algo-num { color: var(--lr); }
+  .svr .algo-num { color: var(--svr); }
+  .knn .algo-num { color: var(--knn); }
+
+  .algo-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .algo-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* METRICS GRID */
+  .metrics-section { margin-bottom: 52px; animation: fadeUp 0.7s 0.25s ease both; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .metric-group {
+    background: var(--surface);
+    padding: 0;
+  }
+
+  .metric-header {
+    padding: 14px 20px;
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .lr .metric-header { color: var(--lr); }
+  .svr .metric-header { color: var(--svr); }
+  .knn .metric-header { color: var(--knn); }
+
+  .metric-row {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .metric-row:last-child { border-bottom: none; }
+
+  .metric-label { font-size: 11px; color: var(--muted); }
+
+  .metric-val {
+    font-size: 15px;
+    font-weight: 500;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .metric-val.best {
+    position: relative;
+  }
+  .metric-val.best::after {
+    content: '★';
+    font-size: 10px;
+    margin-left: 5px;
+    color: var(--accent);
+  }
+
+  /* WINNER BANNER */
+  .winner-banner {
+    background: linear-gradient(135deg, rgba(255,107,107,0.1), rgba(255,107,107,0.05));
+    border: 1px solid rgba(255,107,107,0.3);
+    border-radius: 8px;
+    padding: 22px 28px;
+    margin-bottom: 52px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    animation: fadeUp 0.7s 0.3s ease both;
+  }
+  .winner-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+  }
+  .winner-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--svr);
+    margin-bottom: 4px;
+  }
+  .winner-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .winner-desc { font-size: 12px; color: var(--muted); }
+
+  /* CHARTS */
+  .charts-section { margin-bottom: 52px; animation: fadeUp 0.7s 0.35s ease both; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  @media (max-width: 680px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: 1fr; }
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+  }
+  .chart-card h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+  .chart-card canvas { max-height: 240px; }
+
+  /* RADAR */
+  .radar-section { margin-bottom: 52px; animation: fadeUp 0.7s 0.4s ease both; }
+  .radar-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .radar-card canvas { max-width: 320px; max-height: 320px; flex-shrink: 0; }
+
+  .radar-info { flex: 1; min-width: 200px; }
+  .radar-info h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 14px;
+  }
+  .radar-info p { font-size: 12px; color: var(--muted); line-height: 1.8; margin-bottom: 16px; }
+
+  .insight {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    border-radius: 0 4px 4px 0;
+  }
+  .insight strong { color: var(--text); }
+
+  /* FEATURE TABLE */
+  .table-section { margin-bottom: 52px; animation: fadeUp 0.7s 0.45s ease both; }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  thead th {
+    background: var(--surface2);
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td {
+    padding: 12px 16px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+  tbody td:first-child { color: var(--muted); font-size: 11px; }
+  .chip {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .chip.good { background: rgba(105,255,138,0.15); color: var(--knn); }
+  .chip.bad  { background: rgba(255,107,107,0.15); color: var(--svr); }
+  .chip.mid  { background: rgba(0,229,255,0.12); color: var(--lr); }
+
+  /* DATASET INFO */
+  .dataset-section { animation: fadeUp 0.7s 0.5s ease both; }
+  .dataset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .ds-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px;
+  }
+  .ds-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .ds-label { font-size: 11px; color: var(--muted); }
+
+  /* ANIMATIONS */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Progress bars in metric rows */
+  .bar-wrap { width: 100%; height: 3px; background: var(--border); border-radius: 2px; margin-top: 6px; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 1.2s cubic-bezier(0.16,1,0.3,1); }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="tag">Machine Learning · Regression Analysis</div>
+    <h1>Algorithm <span>Comparison</span><br>Dashboard</h1>
+    <p class="subtitle">Comparative analysis of Linear Regression, Support Vector Regression, and K-Nearest Neighbors on the Boston Housing dataset (MEDV target).</p>
+  </header>
+
+  <!-- ALGO BADGES -->
+  <div class="algo-row">
+    <div class="algo-badge lr">
+      <div class="algo-num">Project 1</div>
+      <div class="algo-name">Linear Regression</div>
+      <div class="algo-desc">Fits a straight-line relationship between input features and the median house value. Simple, interpretable, but assumes linearity.</div>
+    </div>
+    <div class="algo-badge svr">
+      <div class="algo-num">Project 2</div>
+      <div class="algo-name">Support Vector Regression</div>
+      <div class="algo-desc">Uses a hyperplane with epsilon-insensitive margins in a higher-dimensional space. Handles non-linearity with kernel tricks.</div>
+    </div>
+    <div class="algo-badge knn">
+      <div class="algo-num">Project 3</div>
+      <div class="algo-name">K-Nearest Neighbors</div>
+      <div class="algo-desc">Predicts based on the average of K closest training samples. Non-parametric and flexible, but sensitive to feature scale.</div>
+    </div>
+  </div>
+
+  <!-- WINNER BANNER -->
+  <div class="winner-banner">
+    <div class="winner-icon">🏆</div>
+    <div>
+      <div class="winner-label">Best Performing Model</div>
+      <div class="winner-title">Support Vector Regression (SVR)</div>
+      <div class="winner-desc">Achieved the highest R² score of 62.40% and lowest RMSE of 5.68 — outperforming both LR and KNN on the Boston Housing dataset.</div>
+    </div>
+  </div>
+
+  <!-- METRICS TABLE -->
+  <div class="metrics-section">
+    <div class="section-title">Performance Metrics</div>
+    <div class="metrics-grid">
+
+      <div class="metric-group lr">
+        <div class="metric-header lr">Linear Regression</div>
+        <div class="metric-row">
+          <span class="metric-label">MSE</span>
+          <span class="metric-val" style="color:var(--lr)">71.22</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">RMSE</span>
+          <span class="metric-val" style="color:var(--lr)">8.44</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">R² Score</span>
+          <span class="metric-val" style="color:var(--lr)">0.169</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Accuracy</span>
+          <span class="metric-val" style="color:var(--lr)">16.90%</span>
+        </div>
+      </div>
+
+      <div class="metric-group svr">
+        <div class="metric-header svr">SVR ★ Best</div>
+        <div class="metric-row">
+          <span class="metric-label">MSE</span>
+          <span class="metric-val best" style="color:var(--svr)">32.22</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">RMSE</span>
+          <span class="metric-val best" style="color:var(--svr)">5.68</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">R² Score</span>
+          <span class="metric-val best" style="color:var(--svr)">0.624</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Accuracy</span>
+          <span class="metric-val best" style="color:var(--svr)">62.40%</span>
+        </div>
+      </div>
+
+      <div class="metric-group knn">
+        <div class="metric-header knn">KNN Regression</div>
+        <div class="metric-row">
+          <span class="metric-label">MSE</span>
+          <span class="metric-val" style="color:var(--knn)">37.41</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">RMSE</span>
+          <span class="metric-val" style="color:var(--knn)">6.12</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">R² Score</span>
+          <span class="metric-val" style="color:var(--knn)">0.563</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Accuracy</span>
+          <span class="metric-val" style="color:var(--knn)">56.35%</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-section">
+    <div class="section-title">Visual Comparison</div>
+    <div class="charts-grid">
+
+      <div class="chart-card">
+        <h3>R² Score (Higher is Better)</h3>
+        <canvas id="r2Chart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Error Metrics (Lower is Better)</h3>
+        <canvas id="errorChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>Accuracy % Comparison</h3>
+        <canvas id="accChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <h3>MSE Breakdown</h3>
+        <canvas id="mseChart"></canvas>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RADAR -->
+  <div class="radar-section">
+    <div class="section-title">Holistic Comparison</div>
+    <div class="radar-card">
+      <canvas id="radarChart"></canvas>
+      <div class="radar-info">
+        <h3>Model Profile Analysis</h3>
+        <p>The radar chart maps each algorithm across four normalized performance dimensions. SVR dominates across all axes, while KNN holds second place. Linear Regression lags significantly, indicating the Boston Housing dataset has non-linear relationships that a simple linear model cannot capture.</p>
+        <div class="insight">
+          <strong>Key Takeaway:</strong> The feature RM (average rooms) and LSTAT (% lower-status population) are highly correlated with MEDV. Kernel-based methods like SVR capture these non-linear patterns far better than a straight-line fit.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON TABLE -->
+  <div class="table-section">
+    <div class="section-title">Algorithm Properties</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th style="color:var(--lr)">Linear Regression</th>
+            <th style="color:var(--svr)">SVR</th>
+            <th style="color:var(--knn)">KNN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Requires Scaling</td><td><span class="chip bad">No</span></td><td><span class="chip good">Yes (done)</span></td><td><span class="chip good">Yes (done)</span></td></tr>
+          <tr><td>Handles Non-linearity</td><td><span class="chip bad">No</span></td><td><span class="chip good">Yes (RBF kernel)</span></td><td><span class="chip mid">Partial</span></td></tr>
+          <tr><td>Interpretability</td><td><span class="chip good">High</span></td><td><span class="chip bad">Low</span></td><td><span class="chip mid">Medium</span></td></tr>
+          <tr><td>Training Speed</td><td><span class="chip good">Fast</span></td><td><span class="chip mid">Medium</span></td><td><span class="chip good">Fast</span></td></tr>
+          <tr><td>Missing Value Strategy</td><td>Mean Imputation</td><td>Mean Imputation</td><td>Mean Imputation</td></tr>
+          <tr><td>Test Set Size</td><td>20%</td><td>20%</td><td>20%</td></tr>
+          <tr><td>Dataset</td><td>Boston Housing</td><td>Boston Housing</td><td>Boston Housing</td></tr>
+          <tr><td>Target Variable</td><td>MEDV</td><td>MEDV</td><td>MEDV</td></tr>
+          <tr><td>Missing Values (RM)</td><td>5 rows</td><td>5 rows</td><td>5 rows</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DATASET -->
+  <div class="dataset-section">
+    <div class="section-title">Dataset Overview — Boston Housing</div>
+    <div class="dataset-grid">
+      <div class="ds-card"><div class="ds-val" style="color:var(--lr)">506</div><div class="ds-label">Total Samples</div></div>
+      <div class="ds-card"><div class="ds-val" style="color:var(--svr)">13</div><div class="ds-label">Input Features</div></div>
+      <div class="ds-card"><div class="ds-val" style="color:var(--knn)">1</div><div class="ds-label">Target (MEDV)</div></div>
+      <div class="ds-card"><div class="ds-val" style="color:var(--accent)">80/20</div><div class="ds-label">Train/Test Split</div></div>
+      <div class="ds-card"><div class="ds-val" style="color:var(--lr)">5</div><div class="ds-label">Missing (RM col)</div></div>
+      <div class="ds-card"><div class="ds-val" style="color:var(--svr)">42</div><div class="ds-label">Random State</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const lr = '#00e5ff', svr = '#ff6b6b', knn = '#69ff8a';
+const gridColor = 'rgba(255,255,255,0.04)';
+const tickColor = '#6b7589';
+
+Chart.defaults.color = tickColor;
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const baseOpts = {
+  responsive: true,
+  plugins: {
+    legend: { labels: { color: tickColor, boxWidth: 12, padding: 14 } }
+  },
+  scales: {
+    x: { grid: { color: gridColor }, ticks: { color: tickColor } },
+    y: { grid: { color: gridColor }, ticks: { color: tickColor } }
+  }
+};
+
+// R2 Bar
+new Chart(document.getElementById('r2Chart'), {
+  type: 'bar',
+  data: {
+    labels: ['Linear Regression', 'SVR', 'KNN'],
+    datasets: [{
+      label: 'R² Score',
+      data: [0.169, 0.624, 0.563],
+      backgroundColor: [
+        'rgba(0,229,255,0.25)', 'rgba(255,107,107,0.35)', 'rgba(105,255,138,0.25)'
+      ],
+      borderColor: [lr, svr, knn],
+      borderWidth: 2,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    ...baseOpts,
+    plugins: { ...baseOpts.plugins, legend: { display: false } },
+    scales: {
+      ...baseOpts.scales,
+      y: { ...baseOpts.scales.y, max: 1, min: 0 }
+    }
+  }
+});
+
+// Error Grouped Bar
+new Chart(document.getElementById('errorChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Linear Regression', 'SVR', 'KNN'],
+    datasets: [
+      {
+        label: 'MSE',
+        data: [71.22, 32.22, 37.41],
+        backgroundColor: ['rgba(0,229,255,0.18)', 'rgba(255,107,107,0.28)', 'rgba(105,255,138,0.18)'],
+        borderColor: [lr, svr, knn], borderWidth: 2, borderRadius: 3
+      },
+      {
+        label: 'RMSE',
+        data: [8.44, 5.68, 6.12],
+        backgroundColor: ['rgba(0,229,255,0.35)', 'rgba(255,107,107,0.5)', 'rgba(105,255,138,0.35)'],
+        borderColor: [lr, svr, knn], borderWidth: 2, borderRadius: 3
+      }
+    ]
+  },
+  options: {
+    ...baseOpts,
+    plugins: { ...baseOpts.plugins, legend: { labels: { color: tickColor, boxWidth: 10 } } }
+  }
+});
+
+// Accuracy Doughnut-ish line
+new Chart(document.getElementById('accChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Linear Regression', 'SVR', 'KNN'],
+    datasets: [{
+      label: 'Accuracy %',
+      data: [16.9, 62.4, 56.35],
+      backgroundColor: [
+        'rgba(0,229,255,0.22)', 'rgba(255,107,107,0.38)', 'rgba(105,255,138,0.22)'
+      ],
+      borderColor: [lr, svr, knn],
+      borderWidth: 2,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    ...baseOpts,
+    indexAxis: 'y',
+    plugins: { ...baseOpts.plugins, legend: { display: false } },
+    scales: {
+      x: { ...baseOpts.scales.x, max: 100, min: 0, ticks: { color: tickColor, callback: v => v + '%' } },
+      y: { ...baseOpts.scales.y }
+    }
+  }
+});
+
+// MSE comparison line chart
+new Chart(document.getElementById('mseChart'), {
+  type: 'line',
+  data: {
+    labels: ['LR', 'SVR', 'KNN'],
+    datasets: [
+      {
+        label: 'MSE',
+        data: [71.22, 32.22, 37.41],
+        borderColor: svr, backgroundColor: 'rgba(255,107,107,0.08)',
+        pointBackgroundColor: [lr, svr, knn],
+        pointBorderColor: [lr, svr, knn],
+        pointRadius: 7, tension: 0.4, fill: true, borderWidth: 2
+      }
+    ]
+  },
+  options: {
+    ...baseOpts,
+    plugins: { ...baseOpts.plugins, legend: { display: false } }
+  }
+});
+
+// Radar
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['R² Score', 'Low MSE', 'Low RMSE', 'Accuracy'],
+    datasets: [
+      {
+        label: 'Linear Regression',
+        data: [16.9, 0, 0, 16.9],
+        borderColor: lr, backgroundColor: 'rgba(0,229,255,0.08)',
+        pointBackgroundColor: lr, borderWidth: 2
+      },
+      {
+        label: 'SVR',
+        data: [62.4, 54.7, 67.2, 62.4],
+        borderColor: svr, backgroundColor: 'rgba(255,107,107,0.12)',
+        pointBackgroundColor: svr, borderWidth: 2
+      },
+      {
+        label: 'KNN',
+        data: [56.35, 47.4, 60.8, 56.35],
+        borderColor: knn, backgroundColor: 'rgba(105,255,138,0.08)',
+        pointBackgroundColor: knn, borderWidth: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: tickColor, boxWidth: 12, padding: 12 } }
+    },
+    scales: {
+      r: {
+        angleLines: { color: 'rgba(255,255,255,0.06)' },
+        grid: { color: 'rgba(255,255,255,0.06)' },
+        pointLabels: { color: '#9aa3b5', font: { size: 11 } },
+        ticks: { backdropColor: 'transparent', color: tickColor, font: { size: 9 } }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
